@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEDIBOLA - Notícias de Desporto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .country-toggle {
+            display: flex;
+            background-color: #34495e;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .country-btn {
+            padding: 8px 20px;
+            border: none;
+            background-color: transparent;
+            color: #95a5a6;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .country-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .country-btn:hover:not(.active) {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .container {
+            display: none;
+            height: calc(100vh - 60px);
+            gap: 2px;
+            background-color: #ddd;
+        }
+
+        .container.active {
+            display: flex;
+        }
+
+        .iframe-wrapper {
+            flex: 1;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .iframe-header {
+            background-color: #34495e;
+            color: white;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .refresh-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .refresh-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        .site-name {
+            flex: 1;
+            text-align: center;
+        }
+
+        .iframe-scroll-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: white;
+            display: block;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .status-loading {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .status-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .status-error {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .config-box {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-width: 350px;
+            z-index: 1000;
+        }
+
+        .config-box h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .config-box input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .config-box button {
+            width: 100%;
+            padding: 10px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .config-box button:hover {
+            background-color: #229954;
+        }
+
+        .close-config {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #95a5a6;
+        }
+
+        .proxy-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .proxy-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .proxy-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 1024px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .container {
+                flex-direction: column;
+                height: auto;
+                overflow-y: auto;
+            }
+
+            .iframe-wrapper {
+                height: 600px;
+                min-height: 600px;
+            }
+
+            .config-box {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>⚽ PEDIBOLA</h1>
+        <div class="country-toggle">
+            <button class="country-btn active" onclick="switchCountry('pt')">
+                🇵🇹 PT
+            </button>
+            <button class="country-btn" onclick="switchCountry('es')">
+                🇪🇸 ES
+            </button>
+        </div>
+    </header>
+
+    <!-- Portugal -->
+    <div class="container active" id="container-pt">
+        <div class="iframe-wrapper">
+            <div class="iframe-header">
+                <span class="site-name">A Bola</span>
+                <button class="refresh-btn" onclick="refreshIframe('abola')">
+                    <span>🔄</span> Atualizar
+                </button>
+            </div>
+            <div class="iframe-scroll-wrapper">
+                <div class="status-indicator status-loading" id="status-abola">Carregando...</div>
+                <iframe 
+                    id="abola"
+                    title="A Bola"
+                ></iframe>
+            </div>
+        </div>
+
+        <div class="iframe-wrapper">
+            <div class="iframe-header">
+                <span class="site-name">O Jogo</span>
+                <button class="refresh-btn" onclick="refreshIframe('ojogo')">
+                    <span>🔄</span> Atualizar
+                </button>
+            </div>
+            <div class="iframe-scroll-wrapper">
+                <div class="status-indicator status-loading" id="status-ojogo">Carregando...</div>
+                <iframe 
+                    id="ojogo"
+                    title="O Jogo"
+                ></iframe>
+            </div>
+        </div>
+
+        <div class="iframe-wrapper">
+            <div class="iframe-header">
+                <span class="site-name">Record</span>
+                <button class="refresh-btn" onclick="refreshIframe('record')">
+                    <span>🔄</span> Atualizar
+                </button>
+            </div>
+            <div class="iframe-scroll-wrapper">
+                <div class="status-indicator status-loading" id="status-record">Carregando...</div>
+                <iframe 
+                    id="record"
+                    title="Record"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Espanha -->
+    <div class="container" id="container-es">
+        <div class="iframe-wrapper">
+            <div class="iframe-header">
+                <span class="site-name">Marca</span>
+                <button class="refresh-btn" onclick="refreshIframe('marca')">
+                    <span>🔄</span> Atualizar
+                </button>
+            </div>
+            <div class="iframe-scroll-wrapper">
+                <div class="status-indicator status-loading" id="status-marca">Cargando...</div>
+                <iframe 
+                    id="marca"
+                    title="Marca"
+                ></iframe>
+            </div>
+        </div>
+
+        <div class="iframe-wrapper">
+            <div class="iframe-header">
+                <span class="site-name">Mundo Deportivo</span>
+                <button class="refresh-btn" onclick="refreshIframe('mundodeportivo')">
+                    <span>🔄</span> Atualizar
+                </button>
+            </div>
+            <div class="iframe-scroll-wrapper">
+                <div class="status-indicator status-loading" id="status-mundodeportivo">Cargando...</div>
+                <iframe 
+                    id="mundodeportivo"
+                    title="Mundo Deportivo"
+                ></iframe>
+            </div>
+        </div>
+
+        <div class="iframe-wrapper">
+            <div class="iframe-header">
+                <span class="site-name">AS</span>
+                <button class="refresh-btn" onclick="refreshIframe('as')">
+                    <span>🔄</span> Atualizar
+                </button>
+            </div>
+            <div class="iframe-scroll-wrapper">
+                <div class="status-indicator status-loading" id="status-as">Cargando...</div>
+                <iframe 
+                    id="as"
+                    title="AS"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Box -->
+    <div class="config-box" id="configBox">
+        <span class="close-config" onclick="document.getElementById('configBox').style.display='none'">×</span>
+        <h3>⚙️ Configuração do Servidor Proxy</h3>
+        <input 
+            type="text" 
+            id="proxyUrl" 
+            placeholder="URL do proxy (ex: https://seu-app.render.com)"
+            value="http://localhost:3000"
+        />
+        <button onclick="updateProxyUrl()">Guardar e Conectar</button>
+        <div class="proxy-status disconnected" id="proxyStatus">
+            ⚠️ Configure o URL do proxy acima
+        </div>
+    </div>
+
+    <script>
+        // Configuração do proxy
+        // PRODUÇÃO: Substitui 'http://localhost:3000' pelo teu URL do Render
+        // Exemplo: 'https://pedibola-backend.onrender.com'
+        let PROXY_URL = localStorage.getItem('proxyUrl') || 'http://localhost:3000';
+        
+        // Para PRODUÇÃO, descomenta e edita a linha abaixo:
+        // PROXY_URL = 'https://pedibola-backend.onrender.com';  // ← EDITA AQUI!
+
+        // Atualizar input com valor salvo
+        document.getElementById('proxyUrl').value = PROXY_URL;
+
+        function updateProxyUrl() {
+            const newUrl = document.getElementById('proxyUrl').value.trim();
+            if (!newUrl) {
+                alert('Por favor, insira um URL válido');
+                return;
+            }
+            
+            PROXY_URL = newUrl.replace(/\/$/, ''); // Remove trailing slash
+            localStorage.setItem('proxyUrl', PROXY_URL);
+            
+            // Testar conexão
+            testProxyConnection();
+            
+            // Recarregar todos os iframes
+            loadAllIframes();
+        }
+
+        async function testProxyConnection() {
+            const statusEl = document.getElementById('proxyStatus');
+            statusEl.className = 'proxy-status disconnected';
+            statusEl.textContent = '🔄 Testando conexão...';
+            
+            try {
+                const response = await fetch(PROXY_URL, { method: 'GET' });
+                if (response.ok) {
+                    statusEl.className = 'proxy-status connected';
+                    statusEl.textContent = '✅ Conectado com sucesso!';
+                    setTimeout(() => {
+                        document.getElementById('configBox').style.display = 'none';
+                    }, 2000);
+                } else {
+                    throw new Error('Servidor não respondeu corretamente');
+                }
+            } catch (error) {
+                statusEl.className = 'proxy-status disconnected';
+                statusEl.textContent = `❌ Erro: ${error.message}`;
+            }
+        }
+
+        function switchCountry(country) {
+            document.querySelectorAll('.country-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.getElementById('container-pt').classList.remove('active');
+            document.getElementById('container-es').classList.remove('active');
+            document.getElementById('container-' + country).classList.add('active');
+        }
+
+        function refreshIframe(site) {
+            loadIframe(site);
+            
+            const button = event.target.closest('.refresh-btn');
+            if (button) {
+                button.style.opacity = '0.5';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.style.opacity = '1';
+                    button.disabled = false;
+                }, 1000);
+            }
+        }
+
+        function loadIframe(site) {
+            const iframe = document.getElementById(site);
+            const status = document.getElementById('status-' + site);
+            
+            status.className = 'status-indicator status-loading';
+            status.textContent = 'Carregando...';
+            
+            const proxyEndpoint = `${PROXY_URL}/proxy/${site}`;
+            iframe.src = proxyEndpoint;
+            
+            // Monitorar carregamento
+            iframe.onload = () => {
+                status.className = 'status-indicator status-success';
+                status.textContent = '✓ Online';
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            };
+            
+            iframe.onerror = () => {
+                status.className = 'status-indicator status-error';
+                status.textContent = '✗ Erro';
+            };
+        }
+
+        function loadAllIframes() {
+            const sites = ['abola', 'ojogo', 'record', 'marca', 'mundodeportivo', 'as'];
+            sites.forEach(site => loadIframe(site));
+        }
+
+        // Carregar ao iniciar
+        window.addEventListener('load', () => {
+            testProxyConnection();
+            loadAllIframes();
+        });
+    </script>
+</body>
+</html>
