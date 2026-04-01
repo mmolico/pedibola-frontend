@@ -399,12 +399,10 @@
 
     <script>
         // Configuração do proxy
-        // PRODUÇÃO: Substitui 'http://localhost:3000' pelo teu URL do Render
-        // Exemplo: 'https://pedibola-backend.onrender.com'
-        let PROXY_URL = localStorage.getItem('proxyUrl') || 'http://localhost:3000';
+
+        let PROXY_URL = localStorage.getItem('proxyUrl') || 'https://pedibola-backend.onrender.com';
         
-        // Para PRODUÇÃO, descomenta e edita a linha abaixo:
-        // PROXY_URL = 'https://pedibola-backend.onrender.com';  // ← EDITA AQUI!
+        PROXY_URL = 'https://pedibola-backend.onrender.com';
 
         // Atualizar input com valor salvo
         document.getElementById('proxyUrl').value = PROXY_URL;
