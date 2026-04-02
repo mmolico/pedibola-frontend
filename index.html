@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <!--
     PEDIBOLA - Agregador de Notícias Desportivas
-    Versão: v0.1 Beta
-    Data: 30 Março 2025
+    Versão: v0.1.1 Beta
+    Data: 2 Abril 2025
+    
+    CHANGELOG v0.1.1 Beta:
+    - FIX: Removido localhost:3000 como default
+    - Agora requer configuração explícita do URL do proxy
+    - Mensagem clara pedindo para configurar
     
     CHANGELOG v0.1 Beta:
     - Implementação de soluções específicas por site
@@ -296,7 +301,7 @@
     <header>
         <h1>
             ⚽ PEDIBOLA
-            <span class="version-badge">v0.1 Beta</span>
+            <span class="version-badge">v0.1.1 Beta</span>
         </h1>
         <div class="country-toggle">
             <button class="country-btn active" onclick="switchCountry('pt')">
@@ -428,15 +433,26 @@
 
     <script>
         // Configuração do proxy
-        // PRODUÇÃO: Substitui 'http://localhost:3000' pelo teu URL do Render
-        // Exemplo: 'https://pedibola-backend.onrender.com'
-        let PROXY_URL = localStorage.getItem('proxyUrl') || 'http://localhost:3000';
+        // ⚠️ IMPORTANTE: CONFIGURA O TEU URL DO RENDER ABAIXO!
+        // NÃO USES localhost:3000 - isso só funciona localmente
+        let PROXY_URL = localStorage.getItem('proxyUrl') || '';
         
-        // Para PRODUÇÃO, descomenta e edita a linha abaixo:
+        // ✅ OPÇÃO 1: Edita diretamente aqui (RECOMENDADO)
+        // Descomenta a linha abaixo e cola o URL do teu Render:
         // PROXY_URL = 'https://pedibola-backend.onrender.com';  // ← EDITA AQUI!
+        
+        // ✅ OPÇÃO 2: Configura através da caixa de configuração
+        // (aparece automaticamente se não houver URL configurado)
 
         // Atualizar input com valor salvo
         document.getElementById('proxyUrl').value = PROXY_URL;
+        
+        // Se não houver URL configurado, mostra config box automaticamente
+        if (!PROXY_URL || PROXY_URL === 'http://localhost:3000') {
+            document.getElementById('configBox').style.display = 'block';
+            document.getElementById('proxyStatus').className = 'proxy-status disconnected';
+            document.getElementById('proxyStatus').textContent = '⚠️ Configure o URL do proxy server acima';
+        }
 
         function updateProxyUrl() {
             const newUrl = document.getElementById('proxyUrl').value.trim();
