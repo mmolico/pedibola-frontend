@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<!--
+    PEDIBOLA - Agregador de Notícias Desportivas
+    Versão: v0.1 Beta
+    Data: 30 Março 2025
+    
+    CHANGELOG v0.1 Beta:
+    - Implementação de soluções específicas por site
+    - A Bola: tratamento mínimo (já funciona)
+    - O Jogo: remoção de publicidade + scroll fix
+    - Record: reescrita de links para navegação interna
+    - Sites ES: reescrita de links para navegação interna
+    - Sistema de versionamento implementado
+-->
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
@@ -33,6 +46,19 @@
             font-size: 28px;
             font-weight: 700;
             letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .version-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 12px;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .country-toggle {
@@ -268,7 +294,10 @@
 </head>
 <body>
     <header>
-        <h1>⚽ PEDIBOLA</h1>
+        <h1>
+            ⚽ PEDIBOLA
+            <span class="version-badge">v0.1 Beta</span>
+        </h1>
         <div class="country-toggle">
             <button class="country-btn active" onclick="switchCountry('pt')">
                 🇵🇹 PT
@@ -399,10 +428,12 @@
 
     <script>
         // Configuração do proxy
-
-        let PROXY_URL = localStorage.getItem('proxyUrl') || 'https://pedibola-backend.onrender.com';
+        // PRODUÇÃO: Substitui 'http://localhost:3000' pelo teu URL do Render
+        // Exemplo: 'https://pedibola-backend.onrender.com'
+        let PROXY_URL = localStorage.getItem('proxyUrl') || 'http://localhost:3000';
         
-        PROXY_URL = 'https://pedibola-backend.onrender.com';
+        // Para PRODUÇÃO, descomenta e edita a linha abaixo:
+        // PROXY_URL = 'https://pedibola-backend.onrender.com';  // ← EDITA AQUI!
 
         // Atualizar input com valor salvo
         document.getElementById('proxyUrl').value = PROXY_URL;
