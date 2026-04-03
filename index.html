@@ -437,12 +437,10 @@
         // NÃO USES localhost:3000 - isso só funciona localmente
         let PROXY_URL = localStorage.getItem('proxyUrl') || '';
         
-        // ✅ OPÇÃO 1: Edita diretamente aqui (RECOMENDADO)
-        // Descomenta a linha abaixo e cola o URL do teu Render:
-        // PROXY_URL = 'https://pedibola-backend.onrender.com';  // ← EDITA AQUI!
+
+       PROXY_URL = 'https://pedibola-backend.onrender.com';  
         
-        // ✅ OPÇÃO 2: Configura através da caixa de configuração
-        // (aparece automaticamente se não houver URL configurado)
+    
 
         // Atualizar input com valor salvo
         document.getElementById('proxyUrl').value = PROXY_URL;
