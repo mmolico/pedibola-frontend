@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <!--
     PEDIBOLA - Agregador de Notícias Desportivas
-    Versão: v0.2.2 Beta
+    Versão: v0.2.3 Beta
     Data: 2 Abril 2025
     
-    CHANGELOG v0.2.2 Beta:
-    - FIX: Múltiplas instâncias Nitter (fallback automático)
-    - FIX: Melhor error handling e logs detalhados
-    - 4 instâncias: nitter.net, privacydev.net, poast.org, 1d4.us
-    - Console logs detalhados para debugging
+    CHANGELOG v0.2.3 Beta:
+    - FIX: Substituído RSS2JSON por AllOrigins (erro 422 resolvido)
+    - Parse XML direto do RSS
+    - Mais robusto e confiável
     
-    CHANGELOG v0.2.1 Beta:
-    - Tweets mostram texto completo
-    - "NOT CONNECTED" se falhar
+    CHANGELOG v0.2.2 Beta:
+    - Múltiplas instâncias Nitter
 -->
 <html lang="pt">
 <head>
@@ -413,7 +411,7 @@
     <header>
         <h1>
             ⚽ PEDIBOLA
-            <span class="version-badge">v0.2.2 Beta</span>
+            <span class="version-badge">v0.2.3 Beta</span>
         </h1>
         <div class="country-toggle">
             <button class="country-btn active" onclick="switchCountry('pt')">
@@ -697,11 +695,11 @@
             `;
         }
 
-        // Instâncias Nitter (usar várias como fallback)
+        // Instâncias Nitter
         const nitterInstances = [
-            'https://nitter.net',
-            'https://nitter.privacydev.net',
             'https://nitter.poast.org',
+            'https://nitter.privacydev.net',
+            'https://nitter.net',
             'https://nitter.1d4.us'
         ];
 
@@ -710,33 +708,58 @@
             for (const nitterUrl of nitterInstances) {
                 try {
                     const rssUrl = `${nitterUrl}/${account.handle}/rss`;
-                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+                    
+                    // Usar AllOrigins como proxy CORS
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
                     
                     console.log(`Tentando buscar de ${nitterUrl}...`);
                     
-                    const response = await fetch(apiUrl);
-                    const data = await response.json();
+                    const response = await fetch(proxyUrl);
+                    const xmlText = await response.text();
                     
-                    console.log(`Resposta de ${account.handle}:`, data.status);
+                    // Parse XML simples
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
                     
-                    if (data.status === 'ok' && data.items && data.items.length > 0) {
-                        console.log(`✅ ${data.items.length} tweets de ${account.handle}`);
-                        return data.items.slice(0, 3).map(item => {
-                            let content = item.description || item.title || '';
+                    const items = xmlDoc.getElementsByTagName('item');
+                    
+                    if (items && items.length > 0) {
+                        console.log(`✅ ${items.length} tweets de ${account.handle} encontrados`);
+                        
+                        const tweets = [];
+                        for (let i = 0; i < Math.min(3, items.length); i++) {
+                            const titleEl = items[i].getElementsByTagName('title')[0];
+                            const descEl = items[i].getElementsByTagName('description')[0];
+                            
+                            let content = '';
+                            if (descEl && descEl.textContent) {
+                                content = descEl.textContent;
+                            } else if (titleEl && titleEl.textContent) {
+                                content = titleEl.textContent;
+                            }
+                            
+                            // Limpar HTML
                             content = content.replace(/<[^>]*>/g, '');
+                            content = content.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
                             content = content.substring(0, 280);
                             
-                            return {
-                                author: account.name,
-                                handle: account.handle,
-                                content: content,
-                                verified: account.verified
-                            };
-                        });
+                            if (content.trim()) {
+                                tweets.push({
+                                    author: account.name,
+                                    handle: account.handle,
+                                    content: content,
+                                    verified: account.verified
+                                });
+                            }
+                        }
+                        
+                        if (tweets.length > 0) {
+                            return tweets;
+                        }
                     }
                 } catch (error) {
                     console.log(`❌ Erro com ${nitterUrl}:`, error.message);
-                    continue; // Tentar próxima instância
+                    continue;
                 }
             }
             
