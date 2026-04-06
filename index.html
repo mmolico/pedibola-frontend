@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <!--
     PEDIBOLA - Agregador de Notícias Desportivas
-    Versão: v0.2.3 Beta
+    Versão: v0.2.4 Beta
     Data: 2 Abril 2025
     
-    CHANGELOG v0.2.3 Beta:
-    - FIX: Substituído RSS2JSON por AllOrigins (erro 422 resolvido)
-    - Parse XML direto do RSS
-    - Mais robusto e confiável
+    CHANGELOG v0.2.4 Beta:
+    - FIX: Carousel tweets 2x mais rápido (30s vs 60s)
+    - FIX: Refresh tweets menos frequente (15 min vs 5 min)
+    - Mais tempo para ler todos os tweets
     
-    CHANGELOG v0.2.2 Beta:
-    - Múltiplas instâncias Nitter
+    CHANGELOG v0.2.3 Beta:
+    - AllOrigins para buscar tweets (fix erro 422)
 -->
 <html lang="pt">
 <head>
@@ -279,7 +279,7 @@
 
         .twitter-carousel {
             display: flex;
-            animation: scroll-tweets 60s linear infinite;
+            animation: scroll-tweets 30s linear infinite;
             height: 100%;
             align-items: center;
         }
@@ -411,7 +411,7 @@
     <header>
         <h1>
             ⚽ PEDIBOLA
-            <span class="version-badge">v0.2.3 Beta</span>
+            <span class="version-badge">v0.2.4 Beta</span>
         </h1>
         <div class="country-toggle">
             <button class="country-btn active" onclick="switchCountry('pt')">
@@ -830,8 +830,8 @@
         // Carregar tweets ao iniciar
         loadRealTweets();
 
-        // Atualizar tweets a cada 5 minutos
-        setInterval(loadRealTweets, 5 * 60 * 1000);
+        // Atualizar tweets a cada 15 minutos
+        setInterval(loadRealTweets, 15 * 60 * 1000);
     </script>
 </body>
 </html>
