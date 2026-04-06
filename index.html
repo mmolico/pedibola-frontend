@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <!--
     PEDIBOLA - Agregador de Notícias Desportivas
-    Versão: v0.2.1 Beta
+    Versão: v0.2.2 Beta
     Data: 2 Abril 2025
     
-    CHANGELOG v0.2.1 Beta:
-    - FIX: Tweets mostram texto completo (não cortado)
-    - FIX: Se API falhar → "NOT CONNECTED" (sem tweets falsos)
-    - Maior largura para ler tweets completos
-    - Honestidade com utilizadores
+    CHANGELOG v0.2.2 Beta:
+    - FIX: Múltiplas instâncias Nitter (fallback automático)
+    - FIX: Melhor error handling e logs detalhados
+    - 4 instâncias: nitter.net, privacydev.net, poast.org, 1d4.us
+    - Console logs detalhados para debugging
     
-    CHANGELOG v0.2 Beta:
-    - Tweets REAIS via Nitter RSS + RSS2JSON API
+    CHANGELOG v0.2.1 Beta:
+    - Tweets mostram texto completo
+    - "NOT CONNECTED" se falhar
 -->
 <html lang="pt">
 <head>
@@ -412,7 +413,7 @@
     <header>
         <h1>
             ⚽ PEDIBOLA
-            <span class="version-badge">v0.2.1 Beta</span>
+            <span class="version-badge">v0.2.2 Beta</span>
         </h1>
         <div class="country-toggle">
             <button class="country-btn active" onclick="switchCountry('pt')">
@@ -696,51 +697,86 @@
             `;
         }
 
+        // Instâncias Nitter (usar várias como fallback)
+        const nitterInstances = [
+            'https://nitter.net',
+            'https://nitter.privacydev.net',
+            'https://nitter.poast.org',
+            'https://nitter.1d4.us'
+        ];
+
         async function fetchTweetsFromAccount(account) {
-            try {
-                // Usar Nitter RSS feed via RSS2JSON API (gratuito)
-                const rssUrl = `https://nitter.net/${account.handle}/rss`;
-                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
-                
-                const response = await fetch(apiUrl);
-                const data = await response.json();
-                
-                if (data.status === 'ok' && data.items) {
-                    return data.items.slice(0, 3).map(item => {
-                        // Limpar HTML e extrair texto
-                        let content = item.description || item.title;
-                        content = content.replace(/<[^>]*>/g, ''); // Remove HTML tags
-                        content = content.substring(0, 200); // Max 200 chars
-                        
-                        return {
-                            author: account.name,
-                            handle: account.handle,
-                            content: content,
-                            verified: account.verified
-                        };
-                    });
+            // Tentar cada instância de Nitter
+            for (const nitterUrl of nitterInstances) {
+                try {
+                    const rssUrl = `${nitterUrl}/${account.handle}/rss`;
+                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+                    
+                    console.log(`Tentando buscar de ${nitterUrl}...`);
+                    
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    
+                    console.log(`Resposta de ${account.handle}:`, data.status);
+                    
+                    if (data.status === 'ok' && data.items && data.items.length > 0) {
+                        console.log(`✅ ${data.items.length} tweets de ${account.handle}`);
+                        return data.items.slice(0, 3).map(item => {
+                            let content = item.description || item.title || '';
+                            content = content.replace(/<[^>]*>/g, '');
+                            content = content.substring(0, 280);
+                            
+                            return {
+                                author: account.name,
+                                handle: account.handle,
+                                content: content,
+                                verified: account.verified
+                            };
+                        });
+                    }
+                } catch (error) {
+                    console.log(`❌ Erro com ${nitterUrl}:`, error.message);
+                    continue; // Tentar próxima instância
                 }
-            } catch (error) {
-                console.log(`Erro ao buscar tweets de ${account.handle}:`, error);
             }
+            
+            console.log(`⚠️ Todas instâncias falharam para ${account.handle}`);
             return [];
         }
 
         async function loadRealTweets() {
-            console.log('🔄 Buscando tweets REAIS...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🔄 PEDIBOLA: Buscando tweets REAIS...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
             allTweets = [];
             
             // Buscar tweets de todas as contas
             for (const account of twitterAccounts) {
+                console.log(`\n📱 Buscando: ${account.name} (@${account.handle})`);
                 const tweets = await fetchTweetsFromAccount(account);
-                allTweets = allTweets.concat(tweets);
+                if (tweets.length > 0) {
+                    allTweets = allTweets.concat(tweets);
+                    console.log(`   ✅ ${tweets.length} tweets adicionados`);
+                } else {
+                    console.log(`   ❌ Nenhum tweet carregado`);
+                }
             }
             
+            console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
             if (allTweets.length > 0) {
-                console.log(`✅ ${allTweets.length} tweets carregados!`);
+                console.log(`✅ SUCESSO: ${allTweets.length} tweets carregados TOTAL!`);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
                 displayTweets();
             } else {
-                console.log('❌ Falha ao carregar tweets - mostrando erro');
+                console.log('❌ FALHA: Nenhum tweet carregado');
+                console.log('⚠️  Possíveis causas:');
+                console.log('   - Nitter instâncias offline');
+                console.log('   - RSS2JSON API com problemas');
+                console.log('   - CORS bloqueado');
+                console.log('   - Rate limit atingido');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
                 showNotConnected();
             }
         }
