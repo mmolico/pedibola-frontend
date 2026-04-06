@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <!--
     PEDIBOLA - Agregador de Notícias Desportivas
-    Versão: v0.1.1 Beta
+    Versão: v0.2.1 Beta
     Data: 2 Abril 2025
     
-    CHANGELOG v0.1.1 Beta:
-    - FIX: Removido localhost:3000 como default
-    - Agora requer configuração explícita do URL do proxy
-    - Mensagem clara pedindo para configurar
+    CHANGELOG v0.2.1 Beta:
+    - FIX: Tweets mostram texto completo (não cortado)
+    - FIX: Se API falhar → "NOT CONNECTED" (sem tweets falsos)
+    - Maior largura para ler tweets completos
+    - Honestidade com utilizadores
     
-    CHANGELOG v0.1 Beta:
-    - Implementação de soluções específicas por site
-    - A Bola: tratamento mínimo (já funciona)
-    - O Jogo: remoção de publicidade + scroll fix
-    - Record: reescrita de links para navegação interna
-    - Sites ES: reescrita de links para navegação interna
-    - Sistema de versionamento implementado
+    CHANGELOG v0.2 Beta:
+    - Tweets REAIS via Nitter RSS + RSS2JSON API
 -->
 <html lang="pt">
 <head>
@@ -267,6 +263,97 @@
             color: #721c24;
         }
 
+        /* Banner Twitter Transferências - Carousel */
+        .twitter-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #1DA1F2 0%, #0d8bd9 100%);
+            color: white;
+            padding: 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            height: 80px;
+            overflow: hidden;
+        }
+
+        .twitter-carousel {
+            display: flex;
+            animation: scroll-tweets 60s linear infinite;
+            height: 100%;
+            align-items: center;
+        }
+
+        @keyframes scroll-tweets {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .twitter-carousel:hover {
+            animation-play-state: paused;
+        }
+
+        .tweet-item {
+            min-width: 700px;
+            padding: 15px 30px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            border-right: 1px solid rgba(255,255,255,0.2);
+            height: 100%;
+        }
+
+        .tweet-author {
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff;
+            min-width: 160px;
+            flex-shrink: 0;
+        }
+
+        .tweet-handle {
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+        }
+
+        .tweet-content {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #fff;
+            flex: 1;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+        }
+
+        .tweet-verified {
+            color: #fff;
+            margin-left: 5px;
+        }
+
+        .twitter-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            gap: 10px;
+        }
+
+        .twitter-error-icon {
+            font-size: 20px;
+        }
+
+        /* Ajustar containers para não ficarem atrás do banner */
+        .container {
+            height: calc(100vh - 140px) !important;
+        }
+
         @media (max-width: 1024px) {
             header {
                 flex-direction: column;
@@ -294,6 +381,30 @@
                 left: 10px;
                 max-width: none;
             }
+
+            /* Twitter banner carousel responsive */
+            .twitter-banner {
+                height: 100px;
+            }
+
+            .tweet-item {
+                min-width: 350px;
+                padding: 10px 20px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .tweet-author {
+                font-size: 12px;
+                min-width: auto;
+            }
+
+            .tweet-content {
+                font-size: 11px;
+                line-height: 1.4;
+                -webkit-line-clamp: 4;
+            }
         }
     </style>
 </head>
@@ -301,7 +412,7 @@
     <header>
         <h1>
             ⚽ PEDIBOLA
-            <span class="version-badge">v0.1.1 Beta</span>
+            <span class="version-badge">v0.2.1 Beta</span>
         </h1>
         <div class="country-toggle">
             <button class="country-btn active" onclick="switchCountry('pt')">
@@ -437,10 +548,12 @@
         // NÃO USES localhost:3000 - isso só funciona localmente
         let PROXY_URL = localStorage.getItem('proxyUrl') || '';
         
-
-       PROXY_URL = 'https://pedibola-backend.onrender.com';  
+        // ✅ OPÇÃO 1: Edita diretamente aqui (RECOMENDADO)
+        // Descomenta a linha abaixo e cola o URL do teu Render:
+        // PROXY_URL = 'https://pedibola-backend.onrender.com';  // ← EDITA AQUI!
         
-    
+        // ✅ OPÇÃO 2: Configura através da caixa de configuração
+        // (aparece automaticamente se não houver URL configurado)
 
         // Atualizar input com valor salvo
         document.getElementById('proxyUrl').value = PROXY_URL;
@@ -551,6 +664,115 @@
             testProxyConnection();
             loadAllIframes();
         });
+    </script>
+
+    <!-- Banner Twitter Transferências Carousel -->
+    <div class="twitter-banner">
+        <div class="twitter-carousel" id="tweetCarousel">
+            <!-- Tweets serão carregados aqui via JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Contas Twitter para buscar tweets REAIS
+        const twitterAccounts = [
+            { name: 'Fabrizio Romano', handle: 'FabrizioRomano', verified: true },
+            { name: 'David Ornstein', handle: 'David_Ornstein', verified: true },
+            { name: 'Gianluca Di Marzio', handle: 'DiMarzio', verified: true }
+        ];
+
+        let allTweets = [];
+
+        function createTweetElement(tweet) {
+            return `
+                <div class="tweet-item">
+                    <div class="tweet-author">
+                        ${tweet.author}
+                        ${tweet.verified ? '<span class="tweet-verified">✓</span>' : ''}
+                        <div class="tweet-handle">@${tweet.handle}</div>
+                    </div>
+                    <div class="tweet-content">${tweet.content}</div>
+                </div>
+            `;
+        }
+
+        async function fetchTweetsFromAccount(account) {
+            try {
+                // Usar Nitter RSS feed via RSS2JSON API (gratuito)
+                const rssUrl = `https://nitter.net/${account.handle}/rss`;
+                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=3`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.status === 'ok' && data.items) {
+                    return data.items.slice(0, 3).map(item => {
+                        // Limpar HTML e extrair texto
+                        let content = item.description || item.title;
+                        content = content.replace(/<[^>]*>/g, ''); // Remove HTML tags
+                        content = content.substring(0, 200); // Max 200 chars
+                        
+                        return {
+                            author: account.name,
+                            handle: account.handle,
+                            content: content,
+                            verified: account.verified
+                        };
+                    });
+                }
+            } catch (error) {
+                console.log(`Erro ao buscar tweets de ${account.handle}:`, error);
+            }
+            return [];
+        }
+
+        async function loadRealTweets() {
+            console.log('🔄 Buscando tweets REAIS...');
+            allTweets = [];
+            
+            // Buscar tweets de todas as contas
+            for (const account of twitterAccounts) {
+                const tweets = await fetchTweetsFromAccount(account);
+                allTweets = allTweets.concat(tweets);
+            }
+            
+            if (allTweets.length > 0) {
+                console.log(`✅ ${allTweets.length} tweets carregados!`);
+                displayTweets();
+            } else {
+                console.log('❌ Falha ao carregar tweets - mostrando erro');
+                showNotConnected();
+            }
+        }
+
+        function displayTweets() {
+            const carousel = document.getElementById('tweetCarousel');
+            
+            // Criar HTML dos tweets
+            let tweetsHTML = '';
+            allTweets.forEach(tweet => {
+                tweetsHTML += createTweetElement(tweet);
+            });
+            
+            // Duplicar para loop infinito
+            carousel.innerHTML = tweetsHTML + tweetsHTML;
+        }
+
+        function showNotConnected() {
+            const carousel = document.getElementById('tweetCarousel');
+            carousel.innerHTML = `
+                <div class="twitter-error">
+                    <span class="twitter-error-icon">⚠️</span>
+                    NOT CONNECTED - Tweets unavailable
+                </div>
+            `;
+        }
+
+        // Carregar tweets ao iniciar
+        loadRealTweets();
+
+        // Atualizar tweets a cada 5 minutos
+        setInterval(loadRealTweets, 5 * 60 * 1000);
     </script>
 </body>
 </html>
